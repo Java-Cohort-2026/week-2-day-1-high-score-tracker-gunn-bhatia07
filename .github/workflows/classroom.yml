@@ -1,0 +1,51 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Checks Default Scores
+      id: checks-default-scores
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Checks Default Scores
+        setup-command: ''
+        command: javac src/Main.java && java -cp src Main
+        input: ''
+        expected-output: |-
+          The highest score is: 99
+          The average score is: 88.4
+        comparison-method: contains
+        timeout: 2
+        max-score: 50
+    - name: Checks Injected Low Scores
+      id: checks-injected-low-scores
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: Checks Injected Low Scores
+        setup-command: sed -i 's/int\[\] scores = .*/int\[\] scores = { 10, 20, 30,
+          40, 50 };/' src/Main.java
+        command: javac src/Main.java && java -cp src Main
+        input: ''
+        expected-output: |-
+          The highest score is: 50
+          The average score is: 30.0
+        comparison-method: contains
+        timeout: 2
+        max-score: 47
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        CHECKS-DEFAULT-SCORES_RESULTS: "${{steps.checks-default-scores.outputs.result}}"
+        CHECKS-INJECTED-LOW-SCORES_RESULTS: "${{steps.checks-injected-low-scores.outputs.result}}"
+      with:
+        runners: checks-default-scores,checks-injected-low-scores
